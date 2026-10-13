@@ -163,7 +163,7 @@ select{appearance:none;cursor:pointer;background:linear-gradient(45deg,transpare
       <div class="c lab center">Fecha operación</div><div class="c lab center">Concepto</div><div class="c lab center">Valor total</div>
     </div>
     <div class="row r-det">
-      <div class="c"><label class="lab mob" for="fecha">Fecha operación</label><input id="fecha" type="date" required aria-label="Fecha operación"></div>
+      <div class="c"><label class="lab mob" for="fecha">Fecha operación</label><input id="fecha" class="fe" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" required aria-label="Fecha operación"></div>
       <div class="c"><label class="lab mob" for="concepto">Concepto</label><textarea id="concepto" maxlength="400" required aria-label="Concepto" placeholder="Ej: Servicio de transporte de carga durante septiembre con el vehículo de placas QJL599 en Acacías"></textarea></div>
       <div class="c"><label class="lab mob" for="valor">Valor total</label><div class="money">$<input id="valor" inputmode="numeric" placeholder="0" required aria-label="Valor total"></div></div>
     </div>
@@ -225,6 +225,13 @@ select{appearance:none;cursor:pointer;background:linear-gradient(45deg,transpare
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+
+// ---- fechas escritas a mano (dd/mm/aaaa), sin el calendario del celular ----
+const mascaraFecha = v => { const d = v.replace(/\D/g,"").slice(0,8); return d.slice(0,2) + (d.length>2 ? "/"+d.slice(2,4) : "") + (d.length>4 ? "/"+d.slice(4) : ""); };
+const fechaOk = s => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s||""); if(!m) return false; const dt = new Date(+m[3], +m[2]-1, +m[1]); return dt.getDate()==+m[1] && dt.getMonth()==+m[2]-1 && +m[3]>2000 && +m[3]<2100; };
+const aISO = s => { const [d,m,y] = s.split("/"); return `${y}-${m}-${d}`; };
+const hoyTxt = () => { const h = new Date(); return String(h.getDate()).padStart(2,"0")+"/"+String(h.getMonth()+1).padStart(2,"0")+"/"+h.getFullYear(); };
+document.addEventListener("input", e => { if(e.target.classList.contains("fe")) e.target.value = mascaraFecha(e.target.value); }, true);
 const ADQ = {nombre:"JORGE LUIS FONSECA GUZMAN", id:"1.119.889.272", tel:"314 - 458 - 3660", ciudad:"VILLAVICENCIO"};
 
 // formato de pesos mientras escribe
@@ -258,7 +265,7 @@ function datos(){
   return {
     nombre:v("nombre").toUpperCase(), tipoId:v("tipoId"), cedula:v("cedula"),
     telefono:v("telefono"), ciudad:v("ciudad").toUpperCase(), direccion:v("direccion").toUpperCase(),
-    correo:v("correo"), fecha:v("fecha"), concepto:v("concepto").toUpperCase(),
+    correo:v("correo"), fecha:fechaOk(v("fecha")) ? aISO(v("fecha")) : "", concepto:v("concepto").toUpperCase(),
     valor:Number(v("valor").replace(/\D/g,"")),
     pago:$("pTrans").checked ? "Transaccion" : "Efectivo",
     banco:v("bancoNom"), tipoCta:v("tipoCta"), numCta:v("numCta")
@@ -271,6 +278,7 @@ function validar(d){
                ["fecha","la fecha del servicio"],["concepto","la descripción del servicio"]];
   document.querySelectorAll(".bad").forEach(el => el.classList.remove("bad"));
   req.forEach(([id,txt]) => { if(!$(id).value.trim()){ faltan.push(txt); $(id).classList.add("bad"); }});
+  if(!faltan.includes("la fecha del servicio") && !fechaOk($("fecha").value.trim())){ faltan.push("la fecha bien escrita (dd/mm/aaaa)"); $("fecha").classList.add("bad"); }
   if(!d.valor){ faltan.push("el valor"); $("valor").classList.add("bad"); }
   if(d.pago==="Transaccion"){
     if(!d.banco){ faltan.push("el banco"); $("bancoNom").classList.add("bad"); }
